@@ -28,3 +28,8 @@ build/
 # Misc
 *.bak
 *.tmp
+
+# OpenCode
+.opencode/*
+.opencode.*
+.beads/*
