@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -15,11 +15,13 @@
       }
       #log {
         background: #000;
-        height: 300px;
+        height: 400px;
         overflow-y: scroll;
         padding: 10px;
         border-radius: 5px;
         font-family: monospace;
+        font-size: 13px;
+        line-height: 1.5;
       }
       .chat {
         color: #4af;
@@ -33,6 +35,15 @@
       }
       .share {
         color: #fa4;
+      }
+      .error {
+        color: #f44;
+      }
+      .reconnecting {
+        color: #ff0;
+      }
+      .system {
+        color: #888;
       }
       input {
         padding: 8px;
@@ -50,22 +61,33 @@
         border-radius: 4px;
         cursor: pointer;
       }
+      #stats {
+        margin-top: 10px;
+        padding: 10px;
+        background: #1a1a1a;
+        border-radius: 5px;
+        font-family: monospace;
+        font-size: 12px;
+        color: #888;
+      }
     </style>
   </head>
   <body>
     <h1>TikTok Bridge Debugger</h1>
     <div style="margin-bottom: 20px">
-      <input
-        type="text"
-        id="username"
-        placeholder="Enter TikTok Username (e.g. jessicabalester)"
-      />
+      <input type="text" id="username" placeholder="Enter TikTok Username (e.g. jessicabalester)" />
       <button onclick="start()">Connect</button>
     </div>
+    <div id="stats">Waiting for connection...</div>
     <div id="log"></div>
 
     <script>
       const logDiv = document.getElementById("log");
+      const statsDiv = document.getElementById("stats");
+      let chatCount = 0,
+        giftCount = 0,
+        likeCount = 0,
+        shareCount = 0;
 
       function addLog(msg, type = "") {
         const entry = document.createElement("div");
@@ -74,34 +96,62 @@
         logDiv.prepend(entry);
       }
 
+      function updateStats() {
+        statsDiv.textContent = `Chat: ${chatCount} | Gift: ${giftCount} | Like: ${likeCount} | Share: ${shareCount}`;
+      }
+
       function start() {
         const username = document.getElementById("username").value.trim();
         if (!username) return alert("Please enter a username");
 
-        addLog(`Connecting to ${username}...`);
+        addLog(`Connecting to ${username}...`, "system");
         TikTokBridge.connect(username);
 
-        TikTokBridge.on("connected", (data) =>
-          addLog(`SUCCESS: Joined room ${data.room}`, "like")
-        );
+        TikTokBridge.on("connected", (data) => addLog(`SUCCESS: Joined room ${data.room}`, "like"));
 
         TikTokBridge.on("chat", (data) => {
-          addLog(`${data.user.nickname}: ${data.comment}`, "chat");
+          chatCount++;
+          addLog(`💬 ${data.user.nickname}: ${data.comment}`, "chat");
+          updateStats();
         });
 
         TikTokBridge.on("gift", (data) => {
+          giftCount++;
           addLog(
-            `GIFT: ${data.user.nickname} sent ${data.giftName} x${data.repeatCount}`,
-            "gift"
+            `🎁 ${data.user.nickname} sent "${data.giftName}" (id:${data.giftId}) x${data.repeatCount} — ${data.giftValue}💎 [${data.giftType}]`,
+            "gift",
           );
+          updateStats();
         });
 
         TikTokBridge.on("like", (data) => {
-          addLog(`${data.user.nickname} liked (+${data.likeCount})`, "like");
+          likeCount += data.likeCount;
+          addLog(
+            `❤️ ${data.user.nickname} liked (+${data.likeCount}, total: ${data.totalLikeCount})`,
+            "like",
+          );
+          updateStats();
         });
 
         TikTokBridge.on("share", (data) => {
-          addLog(`${data.user.nickname} shared the live!`, "share");
+          shareCount++;
+          addLog(`🔗 ${data.user.nickname} shared the live!`, "share");
+          updateStats();
+        });
+
+        TikTokBridge.on("reconnecting", (data) => {
+          addLog(
+            `⏳ Reconnecting attempt ${data.attempt} (waiting ${data.delayMs}ms)...`,
+            "reconnecting",
+          );
+        });
+
+        TikTokBridge.on("error", (data) => {
+          addLog(`❌ Error: ${data.message}`, "error");
+        });
+
+        TikTokBridge.on("disconnected", () => {
+          addLog(`⚠️ TikTok Live disconnected`, "error");
         });
       }
     </script>
