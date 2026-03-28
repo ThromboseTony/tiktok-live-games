@@ -126,16 +126,48 @@ class RaceEngine {
 	}
 
 	/**
-	 * Process a chat event (optional lane selection in v1).
-	 * Currently just adds to recent events feed.
+	 * Process a chat event.
+	 * If comment matches a country code/alias, move that horse.
 	 * @param {{user: {uniqueId: string, nickname: string}, comment: string}} data
 	 */
 	handleChat(data) {
-		this._addRecentEvent({
-			type: "chat",
-			nickname: data.user.nickname,
-			text: data.comment,
-		});
+		const { phase } = this.state;
+		const comment = (data.comment || "").trim();
+
+		// Try to match comment to a lane
+		const laneIdx = this.config.chatToLane(comment);
+
+		if (laneIdx >= 0) {
+			// In waiting phase, first vote triggers countdown
+			if (phase === "waiting") {
+				this._setPhase("countdown");
+			}
+
+			// During countdown and racing, votes move horses
+			if (phase === "countdown" || phase === "racing") {
+				const distance = this.config.chatDistance || 3;
+				const lane = this.state.lanes[laneIdx];
+
+				this._moveLane(laneIdx, distance, data.user, {
+					giftName: null,
+					_isChat: true,
+					_comment: comment,
+					_laneFlag: lane?.flag || "",
+				});
+
+				// Check for winner (only during racing)
+				if (phase === "racing") {
+					this._checkFinish();
+				}
+			}
+		} else {
+			// Non-matching chat — just add to feed
+			this._addRecentEvent({
+				type: "chat",
+				nickname: data.user.nickname,
+				text: comment,
+			});
+		}
 	}
 
 	/**
@@ -175,15 +207,28 @@ class RaceEngine {
 			});
 		}
 
-		this._addRecentEvent({
-			type: "gift",
-			nickname: user.nickname,
-			laneFlag: lane.flag,
-			laneName: lane.name,
-			distance,
-			giftName: rawData.giftName || "",
-			giftEmoji: this.config.getGiftEmoji(rawData.giftName),
-		});
+		if (rawData._isChat) {
+			// Chat vote event
+			this._addRecentEvent({
+				type: "vote",
+				nickname: user.nickname,
+				laneFlag: lane.flag,
+				laneName: lane.name,
+				distance,
+				comment: rawData._comment,
+			});
+		} else {
+			// Gift event
+			this._addRecentEvent({
+				type: "gift",
+				nickname: user.nickname,
+				laneFlag: lane.flag,
+				laneName: lane.name,
+				distance,
+				giftName: rawData.giftName || "",
+				giftEmoji: this.config.getGiftEmoji(rawData.giftName),
+			});
+		}
 
 		this._emit("laneMove", { laneIdx, distance, lane, user });
 	}

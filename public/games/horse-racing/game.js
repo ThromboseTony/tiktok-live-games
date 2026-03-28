@@ -58,12 +58,16 @@
 
 			// Get gift emojis for this lane across all tiers
 			const giftEmojis = config.getLaneGiftEmojis(lane.id).join(" ");
+			const voteNum = lane.id + 1; // 1-indexed for viewers
 
 			el.innerHTML =
+				`<div class="lane-top">` +
 				`<span class="lane-flag">${lane.flag}</span> ` +
 				`<span class="lane-name">${lane.name}</span> ` +
-				`<span class="lane-gifts">${giftEmojis}</span> ` +
-				`<span class="lane-dist">0%</span>`;
+				`<span class="lane-vote">Type ${voteNum}</span>` +
+				`<span class="lane-dist">0%</span>` +
+				`</div>` +
+				`<div class="lane-gifts">${giftEmojis}</div>`;
 			laneLabelsDiv.appendChild(el);
 		});
 	}
@@ -102,8 +106,8 @@
 		const trackBottom = H * 0.85;
 		const trackHeight = trackBottom - trackTop;
 		const laneH = trackHeight / laneCount;
-		const trackLeft = 200; // extra space for flag + gift labels
-		const trackRight = W - 30;
+		const trackLeft = 275; // space for wider lane labels with gift icons
+		const trackRight = W - 60; // extra margin for FINISH label
 		const trackWidth = trackRight - trackLeft;
 
 		// Draw track background
@@ -242,8 +246,9 @@
 			const el = document.createElement("div");
 			el.className = "feed-item " + evt.type;
 			if (evt.type === "gift") {
-				// Show gift emoji + nickname → country flag (+distance)
 				el.textContent = `${evt.giftEmoji} ${evt.nickname} → ${evt.laneFlag} (+${evt.distance})`;
+			} else if (evt.type === "vote") {
+				el.textContent = `💬 ${evt.nickname} → ${evt.laneFlag} (+${evt.distance})`;
 			} else if (evt.type === "chat") {
 				el.textContent = `💬 ${evt.nickname}: ${evt.text}`;
 			} else if (evt.type === "like") {

@@ -20,11 +20,11 @@ const CONFIG = {
 	// Top TikTok markets in Asia
 	// ==========================================
 	lanes: [
-		{ id: 0, name: "Vietnam", flag: "🇻🇳", color: "#FF4444" },
-		{ id: 1, name: "Thailand", flag: "🇹🇭", color: "#4488FF" },
-		{ id: 2, name: "Indonesia", flag: "🇮🇩", color: "#44DD44" },
-		{ id: 3, name: "Malaysia", flag: "🇲🇾", color: "#FFCC00" },
-		{ id: 4, name: "China", flag: "🇨🇳", color: "#CC44FF" },
+		{ id: 0, name: "Vietnam", flag: "🇻🇳", color: "#FF4444", aliases: ["vn", "vietnam", "viet nam", "viet"] },
+		{ id: 1, name: "Thailand", flag: "🇹🇭", color: "#4488FF", aliases: ["th", "tl", "thailand", "thai"] },
+		{ id: 2, name: "Indonesia", flag: "🇮🇩", color: "#44DD44", aliases: ["id", "indonesia", "indo"] },
+		{ id: 3, name: "Malaysia", flag: "🇲🇾", color: "#FFCC00", aliases: ["my", "ml", "malaysia", "malay"] },
+		{ id: 4, name: "China", flag: "🇨🇳", color: "#CC44FF", aliases: ["cn", "china", "trung quoc", "trung"] },
 	],
 
 	// ==========================================
@@ -97,6 +97,9 @@ const CONFIG = {
 	/** Distance (arbitrary units) a horse must reach to win */
 	finishLine: 1000,
 
+	/** Distance a single chat vote gives (much less than gifts) */
+	chatDistance: 3,
+
 	/**
 	 * Convert gift diamond value to movement distance.
 	 * Tunable: base + multiplier * sqrt(value) gives diminishing returns on mega-gifts.
@@ -154,17 +157,33 @@ const CONFIG = {
 	},
 
 	/**
-	 * Chat-based lane selection (optional v1 feature).
-	 * Viewer types "1"-"5" or country name → lane index or -1.
+	 * Chat-based lane selection.
+	 * Viewer types country code (VN, TH, ID, MY, CN), aliases, or number 1-5.
+	 * Case-insensitive, trimmed.
+	 * @returns {number} lane index or -1 if no match
 	 */
 	chatToLane(comment) {
-		const num = parseInt(comment, 10);
-		if (num >= 1 && num <= 5) return num - 1;
-		const nameMap = {};
-		this.lanes.forEach((l) => {
-			nameMap[l.name.toLowerCase()] = l.id;
-		});
-		return nameMap[comment.toLowerCase().trim()] ?? -1;
+		const text = (comment || "").toLowerCase().trim();
+		if (!text) return -1;
+
+		// Number shortcut: "1"-"5"
+		const num = parseInt(text, 10);
+		if (num >= 1 && num <= this.lanes.length) return num - 1;
+
+		// Build alias lookup on first call (lazy init)
+		if (!this._chatAliasMap) {
+			this._chatAliasMap = {};
+			for (const lane of this.lanes) {
+				// Country name itself
+				this._chatAliasMap[lane.name.toLowerCase()] = lane.id;
+				// All aliases
+				for (const alias of lane.aliases || []) {
+					this._chatAliasMap[alias.toLowerCase()] = lane.id;
+				}
+			}
+		}
+
+		return this._chatAliasMap[text] ?? -1;
 	},
 };
 

@@ -90,39 +90,58 @@ body {
 }
 
 .lane-label {
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 14px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  padding: 10px 16px;
+  border-radius: 10px;
   font-weight: 600;
-  border-left: 4px solid;
+  border-left: 5px solid;
   white-space: nowrap;
-  min-width: 180px;
+  min-width: 240px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 6px;
 }
 
+.lane-label .lane-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .lane-label .lane-flag {
-  font-size: 20px;
+  font-size: 22px;
 }
 
 .lane-label .lane-name {
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 700;
 }
 
-.lane-label .lane-gifts {
-  font-size: 12px;
-  opacity: 0.7;
-  letter-spacing: 2px;
+.lane-label .lane-vote {
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffd700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
 }
 
 .lane-label .lane-dist {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
-  opacity: 0.8;
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffd700;
+}
+
+.lane-label .lane-gifts {
+  display: flex;
+  gap: 6px;
+  font-size: 26px;
+  line-height: 1.1;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.7));
 }
 
 /* ==========================================
@@ -154,6 +173,9 @@ body {
 
 .feed-item.gift {
   border-left: 3px solid #f4a;
+}
+.feed-item.vote {
+  border-left: 3px solid #ffd700;
 }
 .feed-item.chat {
   border-left: 3px solid #4af;
