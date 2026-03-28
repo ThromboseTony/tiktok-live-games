@@ -1,252 +1,290 @@
 # TikTok Live Games 🎮
 
-An open-source platform that creates interactive game overlays for TikTok Live streams. Viewers can play games by typing commands in chat!
+An open-source platform that creates interactive game overlays for TikTok Live streams. Viewers send gifts to power games in real-time — designed for 24/7 streaming with OBS.
 
 <img width="2938" height="1654" alt="image" src="https://github.com/user-attachments/assets/7fe6231f-8a9b-450b-8490-b38d775a0645" />
 
-## ✨ Features
+## Features
 
-- **Multi-tenant Architecture**: Multiple streamers can use the platform simultaneously.
-- **Generic Game Gateway**: Connect ANY HTML5 game to TikTok in minutes.
-- **Bridge SDK**: Lightweight client-side library for game developers.
-- **Gift Integration**: Automatic gift categorization (small/medium/large).
-- **OBS Ready**: Transparent overlays designed for streaming software.
+- **Multi-tenant Architecture** — Multiple streamers use the platform simultaneously, fully isolated
+- **TikTok Bridge SDK** — Lightweight client-side library to connect any HTML5 game to TikTok Live
+- **Gift Integration** — Automatic gift categorization (small/medium/large) with `giftId` tracking
+- **Event Normalizer** — Consistent event payloads across all TikTok event types
+- **Auto-Reconnect** — Exponential backoff with jitter (up to 5 retries)
+- **OBS Ready** — Transparent overlays designed for streaming software
+- **Event Debugger** — Real-time event monitor for discovering gift names and testing
 
-## 🎯 Available Games
+## Available Games
 
-### Onslaught! Arena ⚔️ (NEW)
+### Horse Racing 🏇
 
-Classic arcade survival modded for TikTok.
+Gift-powered horse race with 5 country lanes. Viewers send gifts to move their country's horse forward.
 
-- **Controls**: Viewers type `up`, `down`, `left`, `right` to move the hero.
-- **Special**: Small gifts trigger rapid fire; Large gifts trigger ultimates.
+- **5 Lanes**: 🇻🇳 Vietnam, 🇹🇭 Thailand, 🇮🇩 Indonesia, 🇲🇾 Malaysia, 🇨🇳 China
+- **Gift → Lane Mapping**: Each gift name maps to a specific lane (configurable in `config.js`)
+- **4 Gift Tiers**: 1-coin, 5-coin, 10-coin, 99-coin — each tier has 5 gifts (one per lane)
+- **Auto-Reset**: Races cycle automatically (Waiting → Countdown → Racing → Finished → Cooldown)
+- **Supporter Tracking**: Top 3 contributors shown on winner overlay
+- **Canvas 2D + DOM HUD**: Progress bars, event feed, phase banners, winner celebration
 
-### Boss Raid 👹
-
-Team-based boss battle.
-
-- **Commands**: `join`, `hit`.
-- **Gifts**: Heal or damage the boss.
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
 - Node.js 18+
-- npm or yarn
+- npm
 
 ### Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/vamnguyen/tiktok-live-games.git
 cd tiktok-live-games
-
-# Install dependencies
 npm install
-
-# Start the server
 npm start
 ```
 
 ### Usage
 
 1. Open the dashboard: http://localhost:3000
-2. Enter your TikTok username
-3. Select a game (Boss Raid)
-4. Click "Generate Game Link"
+2. Enter the TikTok username of someone currently LIVE
+3. Select **Horse Racing**
+4. Click **Generate Game Link**
 5. Copy the overlay URL
-6. Add as Browser Source in OBS/TikTok Studio
-7. Start streaming and tell viewers to type `join`!
+6. Add as **Browser Source** in OBS/TikTok Studio
+7. Viewers send gifts to race!
 
 > **Note**: The TikTok username must be currently LIVE for the connection to work.
 
-## 📁 Project Structure
+### Event Debugger
+
+Visit http://localhost:3000/debug.html to monitor all TikTok events in real-time. Useful for discovering exact gift names to configure lane mappings.
+
+## Project Structure
 
 ```
 tiktok-live-games/
-├── package.json           # Project dependencies
 ├── src/
-│   ├── server.js          # Express + Socket.io server
-│   └── services/
-│       └── TikTokService.js  # TikTok connection manager
-└── public/
-    ├── index.html         # Dashboard UI
-    ├── css/
-    │   └── styles.css     # Global styles
-    ├── js/
-    │   └── dashboard.js   # Dashboard logic
-    └── games/
-        └── boss-raid/     # Boss Raid game
-            ├── overlay.html
-            └── game.js
+│   ├── server.js                        # Express + Socket.io server (port 3000)
+│   ├── services/
+│   │   └── TikTokService.js             # Singleton: TikTok connections, rooms, auto-reconnect
+│   └── lib/
+│       ├── tiktokEventNormalizer.js      # Pure normalization for TikTok events
+│       └── tiktokReconnectPolicy.js      # Exponential backoff reconnect helpers
+├── public/
+│   ├── index.html                        # Dashboard: username → overlay URL generator
+│   ├── debug.html                        # Event debugger: live event monitoring
+│   ├── css/styles.css                    # Dark theme, glass-morphism
+│   ├── js/dashboard.js                   # Game selection & URL generation
+│   ├── lib/tiktok-bridge.js              # Client SDK: Socket.io → game event bridge
+│   └── games/
+│       └── horse-racing/                 # Canvas + DOM horse race game
+│           ├── index.html                # Overlay entry point
+│           ├── game.js                   # Canvas renderer + bridge wiring
+│           ├── race-engine.js            # Pure race state machine
+│           ├── config.js                 # Lanes, gift tiers, gift→lane mapping
+│           └── style.css                 # OBS overlay styles
+└── package.json
 ```
 
-## 🏗️ Architecture
+## Architecture
+
+### Data Flow
+
+```
+TikTok Live → tiktok-live-connector → TikTokService → Socket.io rooms → tiktok-bridge.js → Game
+```
 
 ### Multi-tenant Isolation
 
-- Each streamer gets their own **Socket.io Room** (Room ID = username)
-- TikTok events are routed only to the relevant room
-- No data leakage between streamers
+Each streamer gets their own Socket.io room (Room ID = TikTok username). Events are routed only to the relevant room — no data leakage between streamers.
+
+```
+TikTokService (Singleton)
+  ├── connections: Map<username, WebcastConnection>
+  └── rooms: Map<username, clientCount>
+        │
+        ├── io.to("streamer_a").emit() → [Horse Racing Overlay A]
+        ├── io.to("streamer_b").emit() → [Horse Racing Overlay B]
+        └── io.to("streamer_c").emit() → [Horse Racing Overlay C]
+```
 
 ### Connection Management
 
 - **Singleton Pattern**: Single `TikTokService` instance manages all connections
 - **Connection Reuse**: Existing connections are reused, not recreated
-- **Auto-disconnect**: Connections close after 5 minutes of inactivity
+- **Auto-disconnect**: Connections close after 5 minutes with 0 clients
+- **Auto-reconnect**: Exponential backoff (2s → 4s → 8s → 16s → 32s) with ±30% jitter, max 5 attempts
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    TikTok Live                          │
-└─────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│   TikTokService (Singleton)                             │
-│   ┌─────────────────────────────────────────────────┐   │
-│   │ connections: Map<username, WebcastConnection>   │   │
-│   └─────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-                           │
-          ┌────────────────┼────────────────┐
-          ▼                ▼                ▼
-    ┌──────────┐    ┌──────────┐    ┌──────────┐
-    │ Room: A  │    │ Room: B  │    │ Room: C  │
-    │ (user_a) │    │ (user_b) │    │ (user_c) │
-    └──────────┘    └──────────┘    └──────────┘
-          │                │                │
-          ▼                ▼                ▼
-    [Game Overlay]   [Game Overlay]   [Game Overlay]
-```
-
-## 🤝 Contributing
-
-We welcome contributions! Here's how to get started:
-
-### Development Setup
-
-```bash
-# Fork and clone the repo
-git clone https://github.com/YOUR_USERNAME/tiktok-live-games.git
-cd tiktok-live-games
-
-# Install dependencies
-npm install
-
-# Start in development mode (auto-reload)
-npm run dev
-```
-
-### Adding a New Game
-
-1. Create a new folder in `public/games/your-game-name/`
-2. Add `overlay.html` and `game.js`
-3. Update the dashboard to include your game in the selection
-4. Submit a PR!
-
-**Game Template Structure:**
-
-```
-public/games/your-game/
-├── overlay.html    # Game UI (transparent background for OBS)
-└── game.js         # Game logic + Socket.io handlers
-```
-
-**Required Socket Events:**
-
-```javascript
-// Your game.js should handle these events:
-socket.on("player_join", (data) => {
-  /* Handle player joining */
-});
-socket.on("player_attack", (data) => {
-  /* Handle attacks */
-});
-socket.on("gift_received", (data) => {
-  /* Handle gifts */
-});
-```
-
-### Contribution Guidelines
-
-1. **Fork** the repository
-2. Create a **feature branch**: `git checkout -b feature/amazing-game`
-3. **Commit** your changes: `git commit -m 'Add amazing game'`
-4. **Push** to branch: `git push origin feature/amazing-game`
-5. Open a **Pull Request**
-
-### Code Style
-
-- Use **ES Modules** (`import`/`export`)
-- Write **comments in English**
-- Use **JSDoc** for function documentation
-- Follow existing code formatting
-
-## 📄 API Reference
+## API Reference
 
 ### REST Endpoints
 
 | Endpoint      | Method | Description           |
 | ------------- | ------ | --------------------- |
-| `/api/health` | GET    | Server health check   |
+| `/api/health` | GET    | Server health + stats |
 | `/api/stats`  | GET    | Connection statistics |
 
 ### Socket.io Events
 
 **Client → Server:**
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `join-room` | `username: string` | Join a streamer's room |
-| `leave-room` | `username: string` | Leave a room |
 
-**Server → Client:**
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `room-joined` | `{room, message}` | Successfully joined room |
-| `player_join` | `{user, timestamp}` | A viewer joined the game |
-| `player_attack` | `{user, damage, timestamp}` | A viewer attacked |
-| `gift_received` | `{user, giftName, giftValue, giftType, repeatCount}` | Gift received |
-| `tiktok_connected` | `{roomId}` | Connected to TikTok Live |
-| `connection-error` | `{message}` | Connection failed |
+| Event        | Payload            | Description            |
+| ------------ | ------------------ | ---------------------- |
+| `join-room`  | `username: string` | Join a streamer's room |
+| `leave-room` | `username: string` | Leave a room           |
 
-## 📜 License
+**Server → Client (TikTok Events):**
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+| Event                 | Key Payload Fields                                             | Description              |
+| --------------------- | -------------------------------------------------------------- | ------------------------ |
+| `tiktok_connected`    | `{ roomId }`                                                   | Connected to TikTok Live |
+| `tiktok_chat`         | `{ user, comment }`                                            | Chat message             |
+| `tiktok_gift`         | `{ user, giftId, giftName, giftValue, repeatCount, giftType }` | Gift received            |
+| `tiktok_like`         | `{ user, likeCount, totalLikeCount }`                          | Like/heart               |
+| `tiktok_share`        | `{ user }`                                                     | Share event              |
+| `tiktok_reconnecting` | `{ attempt, delayMs }`                                         | Auto-reconnect attempt   |
+| `tiktok_disconnected` | `{}`                                                           | Disconnected             |
+| `tiktok_error`        | `{ message }`                                                  | Error occurred           |
 
-## 🙏 Acknowledgments
+All events include `timestamp`. The `user` object contains `{ uniqueId, nickname, profilePictureUrl }`.
 
-- [tiktok-live-connector](https://github.com/zerodytrash/TikTok-Live-Connector) - TikTok Live wrapper
-- [Socket.io](https://socket.io/) - Real-time communication
-- Vietnamese Streamer Community 💖
+Gift types: `"small"` (<10 diamonds), `"medium"` (10-99), `"large"` (100+).
 
-## 🛠️ The "Modding" Approach
+## TikTok Bridge SDK
 
-Instead of building games from scratch, you can "mod" existing HTML5 games using our **TikTok Bridge SDK**.
+Client-side SDK that handles Socket.io connection and event dispatch for games.
 
-### 1. Inject the SDK
+### Auto-Connect
 
-Add these to your game's `index.html`:
+The bridge auto-connects if the URL has `?id=username` or `?username=username` params.
 
-```html
-<script src="/socket.io/socket.io.js"></script>
-<script src="/lib/tiktok-bridge.js"></script>
-```
-
-### 2. Connect and Listen
-
-Create a script (e.g., `tiktok-mod.js`) to map events to game functions:
+### API
 
 ```javascript
-// The SDK auto-connects based on URL parameters (?username=...)
-TikTokBridge.on("chat", (data) => {
-  if (data.comment === "jump") myGame.player.jump();
+// Manual connect (auto-connect also works via URL params)
+TikTokBridge.connect(username, serverUrl);
+
+// Listen to events
+TikTokBridge.on("gift", (data) => {
+  console.log(data.giftName, data.giftValue, data.giftType);
 });
 
-TikTokBridge.on("gift", (data) => {
-  if (data.giftType === "large") myGame.useSuperPower();
+TikTokBridge.on("chat", (data) => {
+  console.log(data.user.uniqueId, data.comment);
 });
+
+// Available events: chat, gift, like, share, connected, disconnected, reconnecting, error
 ```
+
+## Adding a New Game
+
+1. Create `public/games/{name}/` with an entry HTML file
+2. Include the SDK:
+   ```html
+   <script src="/socket.io/socket.io.js"></script>
+   <script src="/lib/tiktok-bridge.js"></script>
+   ```
+3. Listen to events:
+   ```javascript
+   TikTokBridge.on("gift", (data) => {
+     /* move piece, deal damage, etc. */
+   });
+   TikTokBridge.on("chat", (data) => {
+     /* parse commands */
+   });
+   ```
+4. Add a game card in `public/index.html`:
+   ```html
+   <div class="game-card" data-game="your-game" data-entry="index.html" data-param="id">
+     <!-- card content -->
+   </div>
+   ```
+
+## Horse Racing Configuration
+
+### Lane Setup (`config.js`)
+
+```javascript
+lanes: [
+  { id: 0, name: "Vietnam", flag: "🇻🇳", color: "#FF4444" },
+  { id: 1, name: "Thailand", flag: "🇹🇭", color: "#4488FF" },
+  { id: 2, name: "Indonesia", flag: "🇮🇩", color: "#44DD44" },
+  { id: 3, name: "Malaysia", flag: "🇲🇾", color: "#FFCC00" },
+  { id: 4, name: "China", flag: "🇨🇳", color: "#CC44FF" },
+];
+```
+
+### Gift Tiers
+
+Each tier has 5 gifts — one per lane (array index = lane index):
+
+| Tier    | Gifts (VN, TH, ID, MY, CN)                                    |
+| ------- | ------------------------------------------------------------- |
+| 1 coin  | Rose, GG, Ice Cream Cone, Finger Heart, TikTok                |
+| 5 coin  | Hand Heart, Little Crown, Butterfly, Love You, Wishing Bottle |
+| 10 coin | Perfume, Doughnut, Cap, Paper Crane, Sunglasses               |
+| 99 coin | Garland, Singing Mic, Star, Concert, Lock and Key             |
+
+### Gift → Distance Formula
+
+```
+distance = 5 + 3 × √(diamondValue)
+```
+
+| Diamonds | Distance |
+| -------- | -------- |
+| 1        | 8 units  |
+| 10       | 14 units |
+| 99       | 35 units |
+
+### Race Phases
+
+```
+WAITING → COUNTDOWN (10s) → RACING (max 120s) → FINISHED (8s) → COOLDOWN (5s) → WAITING
+```
+
+## Development
+
+```bash
+npm run dev    # Development mode with auto-reload
+npm start      # Production
+```
+
+### Tech Stack
+
+| Component | Technology                             |
+| --------- | -------------------------------------- |
+| Runtime   | Node.js >= 18 (ES Modules)             |
+| Server    | Express 4.18 + Socket.io 4.7           |
+| TikTok    | tiktok-live-connector 1.1.9            |
+| Games     | Vanilla Canvas 2D + DOM                |
+| Styling   | Custom CSS (dark theme, glassmorphism) |
+
+No `.env` required for local development. Server runs on port 3000 by default (`PORT` env var supported).
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-game`
+3. Commit your changes: `git commit -m 'Add amazing game'`
+4. Push to branch: `git push origin feature/amazing-game`
+5. Open a Pull Request
+
+### Code Style
+
+- ES Modules (`import`/`export`)
+- Comments in English
+- JSDoc for function documentation
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [tiktok-live-connector](https://github.com/zerodytrash/TikTok-Live-Connector) — TikTok Live API wrapper
+- [Socket.io](https://socket.io/) — Real-time communication
+- Vietnamese Streamer Community
 
 ---
 
