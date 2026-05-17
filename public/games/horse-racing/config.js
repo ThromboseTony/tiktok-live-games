@@ -1,4 +1,4 @@
-/**
+e/**
  * config.js
  * Horse Racing game configuration.
  *
@@ -17,14 +17,17 @@
 const CONFIG = {
 	// ==========================================
 	// LANES (HORSES = COUNTRY FLAGS)
-	// Top TikTok markets in Asia
+	// Top TikTok Europe
 	// ==========================================
 	lanes: [
-		{ id: 0, name: "Vietnam", flag: "🇻🇳", color: "#FF4444", aliases: ["vn", "vietnam", "viet nam", "viet"] },
-		{ id: 1, name: "Thailand", flag: "🇹🇭", color: "#4488FF", aliases: ["th", "tl", "thailand", "thai"] },
-		{ id: 2, name: "Indonesia", flag: "🇮🇩", color: "#44DD44", aliases: ["id", "indonesia", "indo"] },
-		{ id: 3, name: "Malaysia", flag: "🇲🇾", color: "#FFCC00", aliases: ["my", "ml", "malaysia", "malay"] },
-		{ id: 4, name: "China", flag: "🇨🇳", color: "#CC44FF", aliases: ["cn", "china", "trung quoc", "trung"] },
+		{ id: 0, name: "Germany", flag: "🇻🇳", color: "#FF4444", aliases: ["vn", "vietnam", "viet nam", "viet"] },
+		{ id: 1, name: "Italy", flag: "🇹🇭", color: "#4488FF", aliases: ["th", "tl", "thailand", "thai"] },
+		{ id: 2, name: "France", flag: "🇮🇩", color: "#44DD44", aliases: ["id", "indonesia", "indo"] },
+		{ id: 3, name: "Poland", flag: "🇲🇾", color: "#FFCC00", aliases: ["my", "ml", "malaysia", "malay"] },
+		{ id: 4, name: "Sweden", flag: "🇨🇳", color: "#CC44FF", aliases: ["cn", "china", "trung quoc", "trung"] },
+		{ id: 5, name: "Denmark", flag: "🇨🇳", color: "#CC44FF", aliases: ["cn", "china", "trung quoc", "trung"] },
+		{ id: 6, name: "Sweden", flag: "🇨🇳", color: "#CC44FF", aliases: ["cn", "china", "trung quoc", "trung"] },
+		
 	],
 
 	// ==========================================
